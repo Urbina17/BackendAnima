@@ -2,6 +2,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const spotifyRoutes = require("./routes/spotify");
 
 // Importar rutas y middlewares
 const authRoutes = require('./routes/auth');
@@ -24,5 +25,7 @@ app.use('/auth', authRoutes);
 
 // --- Manejo global de errores ---
 app.use(errorHandler);
+
+app.use("/auth/spotify", spotifyRoutes);
 
 module.exports = app;

@@ -1,5 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+ALTER TABLE users ADD COLUMN spotify_id TEXT;
+
+
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(120),
@@ -12,4 +15,6 @@ CREATE TABLE IF NOT EXISTS users (
   reset_code_hash TEXT,
   reset_code_expires TIMESTAMPTZ
 );
+ALTER TABLE users ADD COLUMN spotify_id TEXT;
+
 
