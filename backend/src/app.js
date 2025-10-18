@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
 const spotifyRoutes = require("./routes/spotify");
+const emocionesRoutes = require("./routes/emociones");
 
 // Importar rutas y middlewares
 const authRoutes = require('./routes/auth');
@@ -27,5 +28,8 @@ app.use('/auth', authRoutes);
 app.use(errorHandler);
 
 app.use("/auth/spotify", spotifyRoutes);
+
+//AWS
+app.use("/emociones", emocionesRoutes);
 
 module.exports = app;
