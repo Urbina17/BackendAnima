@@ -16,20 +16,19 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:3000",
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // ⚠️ Para imágenes base64
 app.use(morgan('dev'));
 
 // --- Rutas principales ---
 app.use('/auth', authRoutes);
+app.use('/auth/spotify', spotifyRoutes); // ✅ ANTES del errorHandler
+app.use('/emociones', emocionesRoutes);  // ✅ ANTES del errorHandler
 
-// --- Manejo global de errores ---
+// --- Manejo global de errores (SIEMPRE AL FINAL) ---
 app.use(errorHandler);
-
-app.use("/auth/spotify", spotifyRoutes);
-
-//AWS
-app.use("/emociones", emocionesRoutes);
 
 module.exports = app;

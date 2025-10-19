@@ -28,15 +28,20 @@ router.get("/login", (req, res) => {
 router.get("/callback", async (req, res) => {
   const code = req.query.code || null;
 
+  console.log("🎧 Código recibido de Spotify:", code);
   console.log("🔎 REDIRECT_URI usado:", REDIRECT_URI);
+
+  if (!code) {
+    console.error("❌ No se recibió código de Spotify");
+    return res.redirect(`${FRONTEND_URL}/login?error=no_code`);
+  }
 
   try {
     // Intercambio de code por token
     const authOptions = {
       method: "POST",
       headers: {
-        Authorization:
-          "Basic " + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
+        Authorization: "Basic " + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64"),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: querystring.stringify({
@@ -48,32 +53,57 @@ router.get("/callback", async (req, res) => {
 
     const tokenResponse = await fetch("https://accounts.spotify.com/api/token", authOptions);
     const tokenData = await tokenResponse.json();
-    console.log("Spotify token:", tokenData);
 
-    console.log("🎧 Código recibido de Spotify:", code);
-    console.log("🔐 Token de Spotify:", tokenData.access_token);
+    if (!tokenData.access_token) {
+      console.error("❌ No se obtuvo access_token de Spotify:", tokenData);
+      return res.redirect(`${FRONTEND_URL}/login?error=no_token`);
+    }
+
+    console.log("🔐 Token de Spotify obtenido correctamente");
+
     // Obtener perfil del usuario
     const profileResponse = await fetch("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const profile = await profileResponse.json();
-    console.log("Perfil Spotify:", profile);
+    
+    console.log("👤 Perfil de Spotify:", profile);
 
-    // Crear o actualizar usuario en tu base de datos
-    const email = profile.email || `${profile.id}@spotify.com`; // fallback
+    // Crear o actualizar usuario en la base de datos
+    const email = profile.email || `${profile.id}@spotify.com`;
     let userResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
     let user;
 
     if (userResult.rows.length === 0) {
+      console.log("🆕 Creando nuevo usuario con Spotify");
+      
+      // Generar un password_hash aleatorio para usuarios de Spotify
+      const bcrypt = require('bcryptjs');
+      const crypto = require('crypto');
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const password_hash = await bcrypt.hash(randomPassword, 10);
+      
       const insert = await db.query(
-        `INSERT INTO users (name, email, role, spotify_id)
-         VALUES ($1, $2, 'user', $3)
-         RETURNING id, name, email, role`,
-        [profile.display_name || "Usuario Spotify", email, profile.id]
+        `INSERT INTO users (name, email, password_hash, role, spotify_id)
+         VALUES ($1, $2, $3, 'user', $4)
+         RETURNING id, name, email, role, spotify_id`,
+        [profile.display_name || "Usuario Spotify", email, password_hash, profile.id]
       );
       user = insert.rows[0];
+      console.log("✅ Usuario creado:", user);
     } else {
       user = userResult.rows[0];
+      
+      // Actualizar spotify_id si no existe
+      if (!user.spotify_id) {
+        console.log("🔄 Actualizando spotify_id para usuario existente");
+        await db.query(
+          `UPDATE users SET spotify_id = $1 WHERE id = $2`,
+          [profile.id, user.id]
+        );
+        user.spotify_id = profile.id;
+      }
+      console.log("✅ Usuario existente encontrado:", user);
     }
 
     // Generar token JWT interno
@@ -83,13 +113,14 @@ router.get("/callback", async (req, res) => {
       { expiresIn: "8h" }
     );
 
-    // Redirigir al frontend
+    // Redirigir al frontend con los tokens
     const redirectUrl = `${FRONTEND_URL}/auth/spotify/callback?jwt=${jwtToken}&spotify=${tokenData.access_token}`;
-    console.log("Redirigiendo a:", redirectUrl);
+    console.log("✅ Redirigiendo a:", redirectUrl);
     res.redirect(redirectUrl);
+    
   } catch (err) {
-    console.error("Error en el callback de Spotify:", err);
-    res.status(500).json({ message: "Error en el login con Spotify" });
+    console.error("❌ Error en el callback de Spotify:", err);
+    res.redirect(`${FRONTEND_URL}/login?error=server_error`);
   }
 });
 

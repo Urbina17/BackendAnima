@@ -1,11 +1,14 @@
 const AWS = require("aws-sdk");
 require("dotenv").config();
 
-// Inicializa el cliente de Rekognition
-const rekognition = new AWS.Rekognition({
+// Configurar AWS con región
+AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION || "us-east-1"
 });
+
+const rekognition = new AWS.Rekognition();
 
 /**
  * Detecta emociones en una imagen base64
@@ -13,6 +16,8 @@ const rekognition = new AWS.Rekognition({
  */
 exports.detectEmotions = async (base64Image) => {
   try {
+    console.log("🔍 Procesando imagen con AWS Rekognition...");
+
     // Decodificar la imagen base64 a bytes
     const imageBytes = Buffer.from(
       base64Image.replace(/^data:image\/\w+;base64,/, ""),
@@ -27,8 +32,11 @@ exports.detectEmotions = async (base64Image) => {
     const result = await rekognition.detectFaces(params).promise();
 
     if (!result.FaceDetails || result.FaceDetails.length === 0) {
-      return { error: "No se detectó ningún rostro" };
+      console.warn("⚠️ No se detectó ningún rostro en la imagen");
+      return { error: "No se detectó ningún rostro en la imagen" };
     }
+
+    console.log(`✅ Rostro detectado. ${result.FaceDetails[0].Emotions.length} emociones encontradas`);
 
     // Tomar la emoción principal del primer rostro detectado
     const emociones = result.FaceDetails[0].Emotions;
@@ -42,7 +50,7 @@ exports.detectEmotions = async (base64Image) => {
       confianza: principal.Confidence,
     };
   } catch (err) {
-    console.error("Error en Rekognition:", err);
-    return { error: "Error al analizar la imagen" };
+    console.error("❌ Error en Rekognition:", err);
+    return { error: "Error al analizar la imagen con AWS Rekognition" };
   }
 };
