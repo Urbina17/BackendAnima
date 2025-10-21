@@ -18,15 +18,19 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || "http://localhost:3000",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'x-spotify-token'  // ✅ AGREGAR ESTE HEADER
+  ]
 }));
-app.use(express.json({ limit: '10mb' })); // ⚠️ Para imágenes base64
+app.use(express.json({ limit: '10mb' })); // Para imágenes base64
 app.use(morgan('dev'));
 
 // --- Rutas principales ---
 app.use('/auth', authRoutes);
-app.use('/auth/spotify', spotifyRoutes); // ✅ ANTES del errorHandler
-app.use('/emociones', emocionesRoutes);  // ✅ ANTES del errorHandler
+app.use('/auth/spotify', spotifyRoutes);
+app.use('/emociones', emocionesRoutes);
 
 // --- Manejo global de errores (SIEMPRE AL FINAL) ---
 app.use(errorHandler);
