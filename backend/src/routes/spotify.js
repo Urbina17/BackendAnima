@@ -14,7 +14,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 // 1️⃣ Redirige al usuario al login de Spotify
 router.get("/login", (req, res) => {
-  const scope = "user-read-email playlist-read-private playlist-read-collaborative streaming user-read-playback-state user-modify-playback-state"; // ✅ AGREGAR streaming
+  const scope = "user-read-email user-read-private streaming user-read-playback-state user-modify-playback-state user-read-currently-playing app-remote-control";
   const params = querystring.stringify({
     response_type: "code",
     client_id: CLIENT_ID,
