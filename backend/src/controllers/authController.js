@@ -80,3 +80,103 @@ exports.resetPassword = async (req, res, next) => {
     res.json({ message: 'Contraseña restablecida correctamente' });
   } catch (err) { next(err); }
 };
+
+// ============================================
+// OBTENER PERFIL DEL USUARIO
+// ============================================
+exports.getProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // Obtener datos del usuario
+    const userQuery = await db.query(
+      `SELECT id, name, email, spotify_id, created_at 
+       FROM users 
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (!userQuery.rows.length) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
+
+    const user = userQuery.rows[0];
+
+    // Obtener estadísticas de emociones
+    const statsQuery = await db.query(
+      `SELECT 
+        COUNT(*) as total_analisis,
+        emotion_detected as emocion,
+        COUNT(*) as cantidad
+       FROM emotion_analyses 
+       WHERE user_id = $1
+       GROUP BY emotion_detected
+       ORDER BY cantidad DESC`,
+      [userId]
+    );
+
+    const totalAnalisis = statsQuery.rows.reduce((sum, row) => sum + parseInt(row.cantidad), 0);
+    const emocionMasFrecuente = statsQuery.rows[0] || { emocion: 'N/A', cantidad: 0 };
+
+    // Mapear emojis
+    const emocionEmojis = {
+      'Felicidad': '😊',
+      'Tristeza': '😢',
+      'Enojo': '😠',
+      'Calma': '😌',
+      'Sorpresa': '😲',
+      'Miedo': '😨',
+      'Disgusto': '🤢',
+      'Confusión': '😕'
+    };
+
+    const profile = {
+      id: user.id,
+      nombre: user.name || 'Usuario',
+      email: user.email,
+      fotoPerfil: null,
+      fechaRegistro: user.created_at,
+      spotifyConectado: !!user.spotify_id,
+      spotifyEmail: null,
+      spotifyNombre: null,
+      spotifyFoto: null,
+      totalAnalisis: totalAnalisis,
+      emocionFavorita: emocionMasFrecuente.emocion,
+      emocionFavoritaEmoji: emocionEmojis[emocionMasFrecuente.emocion] || '🎭',
+      cancionesFavoritas: 0 // Puedes calcularlo si tienes favoritos
+    };
+
+    res.json({ success: true, profile });
+  } catch (err) {
+    console.error('Error al obtener perfil:', err);
+    next(err);
+  }
+};
+
+// ============================================
+// ACTUALIZAR NOMBRE DEL USUARIO
+// ============================================
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { name } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ message: 'El nombre es requerido' });
+    }
+
+    await db.query(
+      'UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2',
+      [name.trim(), userId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Perfil actualizado correctamente',
+      name: name.trim()
+    });
+  } catch (err) {
+    console.error('Error al actualizar perfil:', err);
+    next(err);
+  }
+};

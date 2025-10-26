@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
 const controller = require('../controllers/authController');
+const auth = require('../middlewares/auth'); 
 const { forgotLimiter } = require('../middlewares/rateLimiter');
 const { addToken } = require("../utils/tokenBlacklist");
 const authMiddleware = require("../middlewares/auth");
@@ -45,6 +46,7 @@ router.get("/verify-token", authMiddleware, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
-
+router.get('/profile', auth, controller.getProfile); // ✅ Usar controller
+router.put('/profile', auth, controller.updateProfile); // ✅ Usar controller
 
 module.exports = router;

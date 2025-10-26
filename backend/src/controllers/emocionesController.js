@@ -137,3 +137,60 @@ exports.obtenerHistorial = async (req, res) => {
     });
   }
 };
+
+/**
+ * Obtiene estadísticas detalladas del usuario
+ */
+exports.obtenerEstadisticas = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Total de análisis
+    const totalQuery = await db.query(
+      'SELECT COUNT(*) as total FROM emotion_analyses WHERE user_id = $1',
+      [userId]
+    );
+
+    // Emociones por tipo
+    const emocionesQuery = await db.query(
+      `SELECT 
+        emotion_detected as emocion,
+        COUNT(*) as cantidad,
+        ROUND(AVG(confidence), 2) as confianza_promedio
+       FROM emotion_analyses 
+       WHERE user_id = $1
+       GROUP BY emotion_detected
+       ORDER BY cantidad DESC`,
+      [userId]
+    );
+
+    // Últimos 7 días
+    const ultimos7DiasQuery = await db.query(
+      `SELECT 
+        DATE(created_at) as fecha,
+        COUNT(*) as cantidad
+       FROM emotion_analyses 
+       WHERE user_id = $1 
+         AND created_at >= NOW() - INTERVAL '7 days'
+       GROUP BY DATE(created_at)
+       ORDER BY fecha DESC`,
+      [userId]
+    );
+
+    return res.status(200).json({
+      success: true,
+      estadisticas: {
+        totalAnalisis: parseInt(totalQuery.rows[0].total),
+        emocionesPorTipo: emocionesQuery.rows,
+        ultimos7Dias: ultimos7DiasQuery.rows
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ Error al obtener estadísticas:", error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Error al obtener estadísticas" 
+    });
+  }
+};

@@ -9,4 +9,7 @@ router.post("/analizar", auth, emocionesController.analizarEmocion);
 // GET /emociones/historial - Obtiene el historial de análisis
 router.get("/historial", auth, emocionesController.obtenerHistorial);
 
+// GET /emociones/stats - Obtiene estadísticas del usuario
+router.get("/stats", auth, emocionesController.obtenerEstadisticas); // ✅ NUEVO
+
 module.exports = router;
