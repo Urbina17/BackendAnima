@@ -4,6 +4,7 @@ const cors = require('cors');
 const morgan = require('morgan');
 const spotifyRoutes = require("./routes/spotify");
 const emocionesRoutes = require("./routes/emociones");
+const playbackRoutes = require("./routes/playback"); // ✅ NUEVO
 
 // Importar rutas y middlewares
 const authRoutes = require('./routes/auth');
@@ -21,16 +22,17 @@ app.use(cors({
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
-    'x-spotify-token'  // ✅ AGREGAR ESTE HEADER
+    'x-spotify-token'
   ]
 }));
-app.use(express.json({ limit: '10mb' })); // Para imágenes base64
+app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
 // --- Rutas principales ---
 app.use('/auth', authRoutes);
 app.use('/auth/spotify', spotifyRoutes);
 app.use('/emociones', emocionesRoutes);
+app.use('/api/playback', playbackRoutes); // ✅ NUEVA RUTA
 
 // --- Manejo global de errores (SIEMPRE AL FINAL) ---
 app.use(errorHandler);

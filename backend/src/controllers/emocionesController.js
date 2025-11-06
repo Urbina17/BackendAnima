@@ -107,33 +107,60 @@ exports.analizarEmocion = async (req, res) => {
 
 /**
  * Obtiene el historial de análisis de emociones del usuario
+ * ✅ ACTUALIZADO PARA EL DASHBOARD - Ahora soporta filtro por período
  */
 exports.obtenerHistorial = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { limit = 10, offset = 0 } = req.query;
+    const { limit = 100, offset = 0, periodo = 'todo' } = req.query;
+
+    console.log(`📊 Usuario ${userId} solicitó historial: período=${periodo}`);
+
+    // Calcular fecha límite según el período
+    let fechaCondicion = '';
+    let queryParams = [userId];
+
+    if (periodo === 'semana') {
+      fechaCondicion = "AND created_at >= NOW() - INTERVAL '7 days'";
+    } else if (periodo === 'mes') {
+      fechaCondicion = "AND created_at >= NOW() - INTERVAL '30 days'";
+    }
+    // Si periodo === 'todo', no agregamos condición de fecha
 
     const query = `
-      SELECT id, emotion_detected, confidence, all_emotions, created_at
+      SELECT 
+        id,
+        user_id as usuario_id,
+        emotion_detected as emocion_detectada,
+        confidence as confianza,
+        created_at as fecha_analisis,
+        all_emotions
       FROM emotion_analyses
       WHERE user_id = $1
+      ${fechaCondicion}
       ORDER BY created_at DESC
       LIMIT $2 OFFSET $3
     `;
 
-    const result = await db.query(query, [userId, limit, offset]);
+    queryParams.push(limit, offset);
+
+    const result = await db.query(query, queryParams);
+
+    console.log(`✅ Historial obtenido: ${result.rows.length} registros`);
 
     return res.status(200).json({
       success: true,
-      data: result.rows,
-      total: result.rowCount
+      historial: result.rows,  // ← El Dashboard espera 'historial', no 'data'
+      total: result.rows.length,
+      periodo: periodo
     });
 
   } catch (error) {
     console.error("❌ Error al obtener historial:", error);
     return res.status(500).json({ 
       success: false,
-      message: "Error al obtener historial" 
+      message: "Error al obtener historial",
+      error: error.message
     });
   }
 };
