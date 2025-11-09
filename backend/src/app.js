@@ -16,7 +16,17 @@ const app = express();
 // --- Middlewares globales ---
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      "http://localhost:3000"
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed for this origin"));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -25,6 +35,7 @@ app.use(cors({
     'x-spotify-token'
   ]
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));
 
